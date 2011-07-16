@@ -827,12 +827,12 @@ void LuaOpenGL::SetupScreenMatrices()
 	const float vppy   = float(winPosY_bl + globalRendering->viewPosY); // view pixel pos y
 	const float vpsx   = float(globalRendering->viewSizeX);   // view pixel size x
 	const float vpsy   = float(globalRendering->viewSizeY);   // view pixel size y
-	const float spsx   = float(globalRendering->screenSizeX); // screen pixel size x
-	const float spsy   = float(globalRendering->screenSizeY); // screen pixel size x
-	const float halfSX = 0.5f * spsx;            // half screen pixel size x
-	const float halfSY = 0.5f * spsy;            // half screen pixel size y
+	const float wpsx   = float(globalRendering->winSizeX); // window pixel size x
+	const float wpsy   = float(globalRendering->winSizeY); // window pixel size x
+	const float halfSX = 0.5f * wpsx;            // half window pixel size x
+	const float halfSY = 0.5f * wpsy;            // half window pixel size y
 
-	const float zplane = dist * (spsx / width);
+	const float zplane = dist * (wpsx / width);
 	const float znear  = zplane * 0.5;
 	const float zfar   = zplane * 2.0;
 	const float factor = (znear / zplane);

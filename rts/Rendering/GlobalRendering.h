@@ -56,13 +56,17 @@ public:
 	int winSizeX;
 	int winSizeY;
 
-	/// the viewport position relative to the window's bottom-left corner
+	/// the main viewport position relative to the window's bottom-left corner
 	int viewPosX;
 	int viewPosY;
 
-	/// the viewport size in pixels
+	/// the main viewport size in pixels
 	int viewSizeX;
 	int viewSizeY;
+
+	/// relative size of main viewport in the window
+	float mainViewRatioX;
+	float mainViewRatioY;
 
 	/// size of one pixel in viewport coordinates, i.e. 1/viewSizeX and 1/viewSizeY
 	float pixelX;

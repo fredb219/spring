@@ -9,6 +9,7 @@
 #include "System/Input/InputHandler.h"
 #include "GuiElement.h"
 #include "LogOutput.h"
+#include <Rendering/GlobalRendering.h>
 
 namespace agui
 {
@@ -61,7 +62,7 @@ void Gui::Draw()
 	glEnable(GL_BLEND);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0,1,0,1);
+	gluOrtho2D(0,globalRendering->mainViewRatioX ,0,globalRendering->mainViewRatioY);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	for (ElList::reverse_iterator it = elements.rbegin(); it != elements.rend(); ++it)

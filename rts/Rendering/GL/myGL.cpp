@@ -315,7 +315,7 @@ void ClearScreen()
 
 	glMatrixMode(GL_PROJECTION); // Select The Projection Matrix
 	glLoadIdentity();            // Reset The Projection Matrix
-	gluOrtho2D(0,1,0,1);
+	gluOrtho2D(0,globalRendering->mainViewRatioX ,0,globalRendering->mainViewRatioY);
 	glMatrixMode(GL_MODELVIEW);  // Select The Modelview Matrix
 
 	glLoadIdentity();

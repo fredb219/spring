@@ -365,15 +365,21 @@ bool SpringApp::SetSDLVideoMode()
 	}
 
 	//! use desktop resolution?
-	if ((globalRendering->viewSizeX<=0) || (globalRendering->viewSizeY<=0)) {
+	if ((globalRendering->screenSizeX<=0) || (globalRendering->screenSizeY<=0)) {
 		const SDL_VideoInfo* screenInfo = SDL_GetVideoInfo(); //! it's a read-only struct (we don't need to free it!)
-		globalRendering->viewSizeX = screenInfo->current_w;
-		globalRendering->viewSizeY = screenInfo->current_h;
+		globalRendering->screenSizeX = screenInfo->current_w;
+		globalRendering->screenSizeY = screenInfo->current_h;
 	}
 	//! fallback if resolution couldn't be detected
-	if ((globalRendering->viewSizeX<=0) || (globalRendering->viewSizeY<=0)) {
-		globalRendering->viewSizeX = 1024;
-		globalRendering->viewSizeY = 768;
+	if ((globalRendering->winSizeX<=0) || (globalRendering->winSizeY<=0)) {
+		globalRendering->screenSizeX = 1024;
+		globalRendering->screenSizeY = 768;
+	}
+
+	//! If the window size in not already set by the config or the command line, set the resolution to the detected screen size.
+	if ((globalRendering->winSizeX<=0) || (globalRendering->winSizeY<=0)) {
+		globalRendering->winSizeX = globalRendering->screenSizeX;
+		globalRendering->winSizeY = globalRendering->screenSizeX;
 	}
 
 	//! screen will be freed by SDL_Quit()
@@ -381,7 +387,7 @@ bool SpringApp::SetSDLVideoMode()
 	//! Note 3: This function should be called in the main thread of your application.
 	//! User note 1: Some have found that enabling OpenGL attributes like SDL_GL_STENCIL_SIZE (the stencil buffer size) before the video mode has been set causes the application to simply ignore those attributes, while enabling attributes after the video mode has been set works fine.
 	//! User note 2: Also note that, in Windows, setting the video mode resets the current OpenGL context. You must execute again the OpenGL initialization code (set the clear color or the shade model, or reload textures, for example) after calling SDL_SetVideoMode. In Linux, however, it works fine, and the initialization code only needs to be executed after the first call to SDL_SetVideoMode (although there is no harm in executing the initialization code after each call to SDL_SetVideoMode, for example for a multiplatform application).
-	SDL_Surface* screen = SDL_SetVideoMode(globalRendering->viewSizeX, globalRendering->viewSizeY, 32, sdlflags);
+	SDL_Surface* screen = SDL_SetVideoMode(globalRendering->winSizeX, globalRendering->winSizeY, 32, sdlflags);
 	if (!screen) {
 		char buf[1024];
 		SNPRINTF(buf, sizeof(buf), "Could not set video mode:\n%s", SDL_GetError());
@@ -440,9 +446,9 @@ bool SpringApp::SetSDLVideoMode()
 	int bits;
 	SDL_GL_GetAttribute(SDL_GL_BUFFER_SIZE, &bits);
 	if (globalRendering->fullScreen) {
-		LOG("Video mode set to %ix%i/%ibit", globalRendering->viewSizeX, globalRendering->viewSizeY, bits);
+		LOG("Video mode set to %ix%i/%ibit", globalRendering->screenSizeX, globalRendering->screenSizeY, bits);
 	} else {
-		LOG("Video mode set to %ix%i/%ibit (windowed)", globalRendering->viewSizeX, globalRendering->viewSizeY, bits);
+		LOG("Video mode set to %ix%i/%ibit (windowed)", globalRendering->winSizeX, globalRendering->winSizeY, bits);
 	}
 
 	return true;
@@ -455,10 +461,6 @@ bool SpringApp::GetDisplayGeometry()
 #ifndef HEADLESS
 	//! not really needed, but makes it safer against unknown windowmanager behaviours
 	if (globalRendering->fullScreen) {
-		globalRendering->screenSizeX = globalRendering->viewSizeX;
-		globalRendering->screenSizeY = globalRendering->viewSizeY;
-		globalRendering->winSizeX = globalRendering->screenSizeX;
-		globalRendering->winSizeY = globalRendering->screenSizeY;
 		globalRendering->winPosX = 0;
 		globalRendering->winPosY = 0;
 		return true;
@@ -474,10 +476,6 @@ bool SpringApp::GetDisplayGeometry()
 
   #if       defined(__APPLE__)
 	// TODO: implement this function & RestoreWindowPosition() on Mac
-	globalRendering->screenSizeX = 0;
-	globalRendering->screenSizeY = 0;
-	globalRendering->winSizeX = globalRendering->viewSizeX;
-	globalRendering->winSizeY = globalRendering->viewSizeY;
 	globalRendering->winPosX = 30;
 	globalRendering->winPosY = 30;
 	globalRendering->winState = 0;
@@ -597,7 +595,7 @@ void SpringApp::RestoreWindowPosition()
 			}
 
 			if (!stateChanged) {
-				MoveWindow(info.window, globalRendering->winPosX, globalRendering->winPosY, globalRendering->viewSizeX, globalRendering->viewSizeY, true);
+				MoveWindow(info.window, globalRendering->winPosX, globalRendering->winPosY, globalRendering->winSizeX, globalRendering->winSizeY, true);
 			}
 
   #elif     defined(__APPLE__)
@@ -638,10 +636,8 @@ void SpringApp::SaveWindowPosition()
 void SpringApp::SetupViewportGeometry()
 {
 	if (!GetDisplayGeometry()) {
-		globalRendering->screenSizeX = globalRendering->viewSizeX;
-		globalRendering->screenSizeY = globalRendering->viewSizeY;
-		globalRendering->winSizeX = globalRendering->viewSizeX;
-		globalRendering->winSizeY = globalRendering->viewSizeY;
+		globalRendering->viewSizeX = globalRendering->winSizeX;
+		globalRendering->viewSizeY = globalRendering->winSizeY;
 		globalRendering->winPosX = 0;
 		globalRendering->winPosY = 0;
 	}
@@ -659,10 +655,14 @@ void SpringApp::SetupViewportGeometry()
 		globalRendering->viewSizeY = globalRendering->winSizeY;
 		globalRendering->viewPosX = 0;
 		globalRendering->viewPosY = 0;
+		globalRendering->mainViewRatioX = 1;
+		globalRendering->mainViewRatioY = 1;
 	}
 	else {
 		globalRendering->viewSizeX = globalRendering->winSizeX / 2;
 		globalRendering->viewSizeY = globalRendering->winSizeY;
+		globalRendering->mainViewRatioX = (float) globalRendering->winSizeX / (float) globalRendering->viewSizeX;
+		globalRendering->mainViewRatioY = (float) globalRendering->winSizeY / (float) globalRendering->viewSizeY;
 		if (globalRendering->dualScreenMiniMapOnLeft) {
 			globalRendering->viewPosX = globalRendering->winSizeX / 2;
 			globalRendering->viewPosY = 0;
@@ -676,7 +676,8 @@ void SpringApp::SetupViewportGeometry()
 			globalRendering->viewSizeX,
 			globalRendering->viewSizeY,
 			globalRendering->viewPosX,
-			(globalRendering->winSizeY - globalRendering->viewSizeY - globalRendering->viewPosY) );
+			globalRendering->viewPosY);
+
 	globalRendering->pixelX = 1.0f / (float)globalRendering->viewSizeX;
 	globalRendering->pixelY = 1.0f / (float)globalRendering->viewSizeY;
 
@@ -692,7 +693,7 @@ void SpringApp::SetupViewportGeometry()
 void SpringApp::InitOpenGL()
 {
 	SetupViewportGeometry();
-	glViewport(globalRendering->viewPosX, globalRendering->viewPosY, globalRendering->viewSizeX, globalRendering->viewSizeY);
+	glViewport(globalRendering->viewPosX, globalRendering->viewPosY, globalRendering->winSizeX, globalRendering->winSizeY);
 	gluPerspective(45.0f,  globalRendering->aspectRatio, 2.8f, CGlobalRendering::MAX_VIEW_RANGE);
 
 	// Initialize some GL states
@@ -864,13 +865,13 @@ void SpringApp::ParseCmdLine()
 		}
 	}
 
-	globalRendering->viewSizeX = configHandler->Get("XResolution", 0);
+	globalRendering->winSizeX = configHandler->Get("XResolution", 0);
 	if (cmdline->IsSet("xresolution"))
-		globalRendering->viewSizeX = std::max(cmdline->GetInt("xresolution"), 640);
+		globalRendering->winSizeX = std::max(cmdline->GetInt("xresolution"), 640);
 
-	globalRendering->viewSizeY = configHandler->Get("YResolution", 0);
+	globalRendering->winSizeY = configHandler->Get("YResolution", 0);
 	if (cmdline->IsSet("yresolution"))
-		globalRendering->viewSizeY = std::max(cmdline->GetInt("yresolution"), 480);
+		globalRendering->winSizeY = std::max(cmdline->GetInt("yresolution"), 480);
 
 	globalRendering->winPosX  = configHandler->Get("WindowPosX", 32);
 	globalRendering->winPosY  = configHandler->Get("WindowPosY", 32);
